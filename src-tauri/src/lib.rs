@@ -183,7 +183,7 @@ fn run_splash(paths: AppPaths, args: Vec<String>) {
 
     tauri::Builder::default()
         .setup(move |app| {
-            let _window = tauri::WebviewWindowBuilder::new(
+            let _window = tauri::webview::WebviewWindowBuilder::new(
                 app,
                 "splash",
                 tauri::WebviewUrl::External(url),

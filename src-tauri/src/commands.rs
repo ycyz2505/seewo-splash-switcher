@@ -36,12 +36,12 @@ pub struct Status {
 }
 
 #[tauri::command]
-pub fn get_config(state: State<AppState>) -> Config {
+pub fn get_config(state: State<'_, AppState>) -> Config {
     state.config.read().unwrap().clone()
 }
 
 #[tauri::command]
-pub fn save_config(state: State<AppState>, config: Config) -> Result<(), String> {
+pub fn save_config(state: State<'_, AppState>, config: Config) -> Result<(), String> {
     if !state.paths.theme_dir(&config.active_theme).join("manifest.json").exists() {
         return Err(format!("主题不存在：{}", config.active_theme));
     }
@@ -51,19 +51,19 @@ pub fn save_config(state: State<AppState>, config: Config) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn list_themes(state: State<AppState>) -> Vec<ThemeInfo> {
+pub fn list_themes(state: State<'_, AppState>) -> Vec<ThemeInfo> {
     let active = state.config.read().unwrap().active_theme.clone();
     themes::list_themes(&state.paths, &active, state.port)
 }
 
 #[tauri::command]
-pub fn set_active_theme(state: State<AppState>, id: String) -> Result<(), String> {
+pub fn set_active_theme(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let mut config = state.config.write().unwrap();
     themes::set_active_theme(&state.paths, &mut *config, &id).map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
-pub fn import_theme(state: State<AppState>) -> Result<Option<String>, String> {
+pub fn import_theme(state: State<'_, AppState>) -> Result<Option<String>, String> {
     let Some(path) = rfd::FileDialog::new()
         .add_filter("主题包", &["zip"])
         .pick_file()
@@ -76,13 +76,13 @@ pub fn import_theme(state: State<AppState>) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
-pub fn delete_theme(state: State<AppState>, id: String) -> Result<(), String> {
+pub fn delete_theme(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let active = state.config.read().unwrap().active_theme.clone();
     themes::delete_theme(&state.paths, &active, &id).map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
-pub fn get_status(state: State<AppState>) -> Status {
+pub fn get_status(state: State<'_, AppState>) -> Status {
     let install = util::seewo_install();
     let report = apply::read_report(&state.paths);
     let config = state.config.read().unwrap();
@@ -102,7 +102,7 @@ pub fn get_status(state: State<AppState>) -> Status {
 }
 
 #[tauri::command]
-pub fn run_apply(state: State<AppState>, restore: bool) -> Result<ApplyReport, String> {
+pub fn run_apply(state: State<'_, AppState>, restore: bool) -> Result<ApplyReport, String> {
     if util::is_admin() {
         return Ok(apply::run_apply(&state.paths, restore));
     }
@@ -114,7 +114,7 @@ pub fn run_apply(state: State<AppState>, restore: bool) -> Result<ApplyReport, S
 }
 
 #[tauri::command]
-pub fn check_updates(state: State<AppState>) -> Result<Option<UpdateInfo>, String> {
+pub fn check_updates(state: State<'_, AppState>) -> Result<Option<UpdateInfo>, String> {
     let config = state.config.read().unwrap().clone();
     let info = update::check(&state.paths, &config).map_err(|e| format!("{e:#}"))?;
     *state.update.lock().unwrap() = info.clone();
@@ -122,7 +122,7 @@ pub fn check_updates(state: State<AppState>) -> Result<Option<UpdateInfo>, Strin
 }
 
 #[tauri::command]
-pub fn install_update(state: State<AppState>) -> Result<(), String> {
+pub fn install_update(state: State<'_, AppState>) -> Result<(), String> {
     let config = state.config.read().unwrap().clone();
     let info = {
         let stored = state.update.lock().unwrap().clone();
@@ -144,17 +144,17 @@ pub fn open_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_data_dir(state: State<AppState>) -> Result<(), String> {
+pub fn open_data_dir(state: State<'_, AppState>) -> Result<(), String> {
     open::that(&state.paths.data_dir).map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
-pub fn open_logs_dir(state: State<AppState>) -> Result<(), String> {
+pub fn open_logs_dir(state: State<'_, AppState>) -> Result<(), String> {
     open::that(&state.paths.logs_dir).map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
-pub fn read_log(state: State<AppState>, name: String) -> Result<String, String> {
+pub fn read_log(state: State<'_, AppState>, name: String) -> Result<String, String> {
     let allowed = ["app.log", "apply.log", "splash.log", "updater.log"];
     if !allowed.contains(&name.as_str()) {
         return Err("不允许读取该日志".to_string());
@@ -167,7 +167,7 @@ pub fn read_log(state: State<AppState>, name: String) -> Result<String, String> 
 }
 
 #[tauri::command]
-pub fn test_splash(state: State<AppState>) -> Result<(), String> {
+pub fn test_splash(state: State<'_, AppState>) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| format!("{e:#}"))?;
     std::process::Command::new(exe)
         .arg("--splash")

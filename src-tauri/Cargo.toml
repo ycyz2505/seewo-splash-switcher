@@ -5,6 +5,7 @@ description = "Seewo EasiNote splash screen switcher with HTML themes"
 authors = ["ycyz2505"]
 edition = "2021"
 rust-version = "1.77"
+default-run = "seewo-splash-switcher"
 
 [lib]
 name = "seewo_splash_switcher_lib"
