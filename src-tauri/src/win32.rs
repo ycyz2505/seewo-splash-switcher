@@ -107,6 +107,12 @@ pub fn find_main_window() -> Option<WindowInfo> {
     candidates.into_iter().next()
 }
 
+pub fn hide_window(hwnd: isize) {
+    unsafe {
+        ShowWindow(hwnd as HWND, SW_HIDE);
+    }
+}
+
 pub fn reveal_window(hwnd: isize) {
     unsafe {
         ShowWindow(hwnd as HWND, SW_RESTORE);

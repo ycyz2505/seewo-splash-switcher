@@ -159,6 +159,11 @@ pub fn run_splash_loop(
                 );
             }
             runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
+            let entered = runtime.entered.load(Ordering::SeqCst);
+            let launched = runtime.seewo_launched.load(Ordering::SeqCst);
+            if !test_mode && launched && !entered {
+                win32::hide_window(window.hwnd);
+            }
         }
         if runtime.entered.load(Ordering::SeqCst) {
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
