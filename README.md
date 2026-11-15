@@ -3,7 +3,7 @@
 用 HTML 替换希沃白板（EasiNote 5）的启动画面。程序本身是一个 Tauri 2 + Vue 3 的便携应用，所有自定义文件放在 D:，不修改希沃的 DLL/EXE；通过快捷方式接管和 Win32 窗口控制，实现“先显示 HTML，点击后露出希沃主窗口”。
 
 - 支持多个 HTML 主题、导入 ZIP、预览、切换
-- 全屏 WebView2 启动页，支持 CSS/JS/Canvas/WebGL/视频
+- 780×522 居中 WebView2 启动页（与原版启动画面同尺寸），支持 CSS/JS/Canvas/WebGL/视频
 - 后台启动希沃，自动隐藏原版 `Splash Image` 窗口
 - 点击“进入”后把希沃主窗口切到前台
 - 开机 `--boot` 自动重新接管 C:，并检查/安装更新
