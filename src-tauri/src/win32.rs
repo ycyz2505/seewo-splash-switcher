@@ -3,7 +3,7 @@ use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, RECT, TRUE};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, FindWindowW, GetClassNameW, GetWindowRect, GetWindowTextW,
     GetWindowThreadProcessId, IsWindowVisible, SetForegroundWindow, SetWindowPos, ShowWindow,
-    SW_HIDE, SW_SHOWNORMAL, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+    SW_SHOWNORMAL, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
 };
 
 #[derive(Clone)]
@@ -107,9 +107,33 @@ pub fn find_main_window() -> Option<WindowInfo> {
     candidates.into_iter().next()
 }
 
-pub fn hide_window(hwnd: isize) {
+pub fn move_window_offscreen(hwnd: isize) {
     unsafe {
-        ShowWindow(hwnd as HWND, SW_HIDE);
+        SetWindowPos(
+            hwnd as HWND,
+            std::ptr::null_mut(),
+            -32000,
+            -32000,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER,
+        );
+    }
+}
+
+pub fn restore_window(hwnd: isize, x: i32, y: i32, width: i32, height: i32) {
+    unsafe {
+        SetWindowPos(
+            hwnd as HWND,
+            std::ptr::null_mut(),
+            x,
+            y,
+            width,
+            height,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        );
+        ShowWindow(hwnd as HWND, SW_SHOWNORMAL);
+        SetForegroundWindow(hwnd as HWND);
     }
 }
 

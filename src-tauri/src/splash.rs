@@ -15,6 +15,7 @@ pub struct SplashRuntime {
     pub entered: AtomicBool,
     pub seewo_launched: AtomicBool,
     pub main_hwnd: AtomicIsize,
+    pub main_rect: Mutex<Option<(i32, i32, i32, i32)>>,
     pub error: Mutex<Option<String>>,
     pub notify: tokio::sync::Notify,
 }
@@ -26,6 +27,7 @@ impl SplashRuntime {
             entered: AtomicBool::new(false),
             seewo_launched: AtomicBool::new(false),
             main_hwnd: AtomicIsize::new(0),
+            main_rect: Mutex::new(None),
             error: Mutex::new(None),
             notify: tokio::sync::Notify::new(),
         }
@@ -161,8 +163,18 @@ pub fn run_splash_loop(
             runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
             let entered = runtime.entered.load(Ordering::SeqCst);
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
-            if !test_mode && launched && !entered {
-                win32::hide_window(window.hwnd);
+            if !test_mode && launched && !entered && window.rect.left > -10000 {
+                let mut rect = runtime.main_rect.lock().unwrap();
+                if rect.is_none() {
+                    *rect = Some((
+                        window.rect.left,
+                        window.rect.top,
+                        window.width(),
+                        window.height(),
+                    ));
+                }
+                drop(rect);
+                win32::move_window_offscreen(window.hwnd);
             }
         }
         if runtime.entered.load(Ordering::SeqCst) {
@@ -202,7 +214,12 @@ pub fn run_splash_loop(
 
     let hwnd = runtime.main_hwnd.load(Ordering::SeqCst);
     if hwnd != 0 {
-        win32::reveal_window(hwnd);
+        let rect = *runtime.main_rect.lock().unwrap();
+        if let Some((x, y, width, height)) = rect {
+            win32::restore_window(hwnd, x, y, width, height);
+        } else {
+            win32::reveal_window(hwnd);
+        }
         util::log_line(paths, "splash.log", &format!("revealed main window {hwnd}"));
     } else {
         util::log_line(paths, "splash.log", "no main window to reveal");
