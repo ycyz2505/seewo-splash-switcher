@@ -138,7 +138,7 @@ fn run_splash(paths: AppPaths, args: Vec<String>) {
         .collect();
 
     if !config.enabled {
-        if config.splash.launch_seewo {
+        if config.splash.launch_seewo && !test_mode {
             if let Err(err) = splash::launch_seewo(&paths, &config, &forward_args) {
                 util::log_line(&paths, "splash.log", &format!("launch failed: {err:#}"));
             }
@@ -152,7 +152,7 @@ fn run_splash(paths: AppPaths, args: Vec<String>) {
         Ok(port) => port,
         Err(err) => {
             util::log_line(&paths, "splash.log", &format!("server failed: {err:#}"));
-            if config.splash.launch_seewo {
+            if config.splash.launch_seewo && !test_mode {
                 let _ = splash::launch_seewo(&paths, &config, &forward_args);
             }
             return;
@@ -164,7 +164,7 @@ fn run_splash(paths: AppPaths, args: Vec<String>) {
         .or_else(|_| themes::get_theme(&paths, "default"));
     let Ok(manifest) = manifest else {
         util::log_line(&paths, "splash.log", "no theme found; launching Seewo directly");
-        if config.splash.launch_seewo {
+        if config.splash.launch_seewo && !test_mode {
             let _ = splash::launch_seewo(&paths, &config, &forward_args);
         }
         return;
