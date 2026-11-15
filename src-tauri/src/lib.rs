@@ -202,11 +202,13 @@ fn run_splash(paths: AppPaths, args: Vec<String>) {
                 tauri::WebviewUrl::External(url),
             )
             .title("Seewo Splash")
-            .fullscreen(true)
+            .inner_size(780.0, 522.0)
+            .fullscreen(false)
             .decorations(false)
             .always_on_top(true)
             .skip_taskbar(true)
             .resizable(false)
+            .center()
             .focused(true)
             .visible(true)
             .build()?;

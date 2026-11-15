@@ -2,8 +2,8 @@ use std::ptr::null;
 use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, RECT, TRUE};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, FindWindowW, GetClassNameW, GetWindowRect, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, SetForegroundWindow, ShowWindow, SW_HIDE,
-    SW_RESTORE, SW_SHOW,
+    GetWindowThreadProcessId, IsWindowVisible, SetForegroundWindow, SetWindowPos, ShowWindow,
+    SW_HIDE, SW_SHOWNORMAL, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
 };
 
 #[derive(Clone)]
@@ -115,8 +115,16 @@ pub fn hide_window(hwnd: isize) {
 
 pub fn reveal_window(hwnd: isize) {
     unsafe {
-        ShowWindow(hwnd as HWND, SW_RESTORE);
-        ShowWindow(hwnd as HWND, SW_SHOW);
+        ShowWindow(hwnd as HWND, SW_SHOWNORMAL);
+        SetWindowPos(
+            hwnd as HWND,
+            std::ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
+        );
         SetForegroundWindow(hwnd as HWND);
     }
 }
