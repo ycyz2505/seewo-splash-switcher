@@ -86,6 +86,7 @@ export const api = {
   runApply: (restore = false) => invoke<ApplyReport>("run_apply", { restore }),
   checkUpdates: () => invoke<UpdateInfo | null>("check_updates"),
   installUpdate: () => invoke<void>("install_update"),
+  installFromZip: () => invoke<boolean>("install_from_zip"),
   openPath: (path: string) => invoke<void>("open_path", { path }),
   openDataDir: () => invoke<void>("open_data_dir"),
   openLogsDir: () => invoke<void>("open_logs_dir"),

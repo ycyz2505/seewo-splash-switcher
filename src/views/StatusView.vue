@@ -13,6 +13,7 @@ const emit = defineEmits<{
   (e: "test"): void;
   (e: "check-update"): void;
   (e: "install-update"): void;
+  (e: "install-zip"): void;
 }>();
 </script>
 
@@ -27,6 +28,7 @@ const emit = defineEmits<{
     <div class="actions">
       <button class="btn" :disabled="busy" @click="emit('test')">测试启动页</button>
       <button class="btn" :disabled="busy" @click="emit('check-update')">检查更新</button>
+      <button class="btn" :disabled="busy" @click="emit('install-zip')">从本地 ZIP 更新</button>
       <button class="btn primary" :disabled="busy" @click="emit('apply')">一键修复</button>
       <button class="btn danger" :disabled="busy" @click="emit('restore')">恢复原状</button>
     </div>

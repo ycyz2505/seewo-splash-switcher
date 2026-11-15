@@ -174,6 +174,20 @@ async function installUpdate() {
   }
 }
 
+async function installFromZip() {
+  busy.value = true;
+  try {
+    const started = await api.installFromZip();
+    if (started) {
+      showToast("已开始从本地 ZIP 更新，程序会自动重启");
+    }
+  } catch (e) {
+    showToast("本地 ZIP 更新失败：" + errText(e), true);
+  } finally {
+    busy.value = false;
+  }
+}
+
 async function openPath(path: string) {
   try {
     await api.openPath(path);
@@ -259,6 +273,7 @@ onMounted(refreshAll);
           @test="testSplash"
           @check-update="checkUpdates"
           @install-update="installUpdate"
+          @install-zip="installFromZip"
         />
         <LogsView v-else-if="tab === 'logs'" />
       </template>

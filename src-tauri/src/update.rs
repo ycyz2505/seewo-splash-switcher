@@ -369,6 +369,90 @@ fn extract_zip(zip_path: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+fn normalize_staging(staging: &Path) -> Result<PathBuf> {
+    let exe = Path::new("app").join("seewo-splash-switcher.exe");
+    if staging.join(&exe).exists() {
+        return Ok(staging.to_path_buf());
+    }
+    let dirs: Vec<PathBuf> = std::fs::read_dir(staging)?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir())
+        .collect();
+    if dirs.len() == 1 && dirs[0].join(&exe).exists() {
+        return Ok(dirs[0].clone());
+    }
+    Err(anyhow!("更新包缺少 app\\seewo-splash-switcher.exe"))
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let target = dst.join(entry.file_name());
+        if path.is_dir() {
+            copy_dir_recursive(&path, &target)?;
+        } else {
+            std::fs::copy(&path, &target)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn install_from_zip(paths: &AppPaths, zip_path: &Path, restart_args: &str) -> Result<()> {
+    if !zip_path.exists() {
+        return Err(anyhow!("更新包不存在：{}", zip_path.display()));
+    }
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let staging = paths
+        .updates_dir
+        .join("staging")
+        .join(format!("local-{stamp}"));
+    if staging.exists() {
+        std::fs::remove_dir_all(&staging)?;
+    }
+    std::fs::create_dir_all(&staging)?;
+    extract_zip(zip_path, &staging)?;
+    let staging_root = normalize_staging(&staging)?;
+
+    let new_theme = staging_root.join("data").join("themes").join("default");
+    if new_theme.join("manifest.json").exists() {
+        let target = paths.themes_dir.join("default");
+        if target.exists() {
+            let _ = std::fs::remove_dir_all(&target);
+        }
+        copy_dir_recursive(&new_theme, &target)?;
+        util::log_line(paths, "app.log", "updated default theme from local zip");
+    }
+
+    let updater = paths.tool("seewo-updater.exe");
+    if !updater.exists() {
+        return Err(anyhow!("缺少 {}", updater.display()));
+    }
+    let app_exe = paths.app_exe();
+    let pid = std::process::id();
+    std::process::Command::new(&updater)
+        .arg("--root")
+        .arg(&paths.root)
+        .arg("--staging")
+        .arg(&staging_root)
+        .arg("--pid")
+        .arg(pid.to_string())
+        .arg("--restart")
+        .arg(&app_exe)
+        .arg("--restart-args")
+        .arg(restart_args)
+        .spawn()
+        .with_context(|| format!("启动 {}", updater.display()))?;
+    util::log_line(
+        paths,
+        "app.log",
+        &format!("local zip install spawned: {}", zip_path.display()),
+    );
+    Ok(())
+}
+
 pub fn install(paths: &AppPaths, staging: &Path, restart_args: &str) -> Result<()> {
     let updater = paths.tool("seewo-updater.exe");
     if !updater.exists() {

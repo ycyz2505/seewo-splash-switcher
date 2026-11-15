@@ -139,6 +139,22 @@ pub fn install_update(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn install_from_zip(state: State<'_, AppState>) -> Result<bool, String> {
+    let Some(path) = rfd::FileDialog::new()
+        .add_filter("更新包", &["zip"])
+        .pick_file()
+    else {
+        return Ok(false);
+    };
+    update::install_from_zip(&state.paths, &path, "").map_err(|e| format!("{e:#}"))?;
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(800));
+        std::process::exit(0);
+    });
+    Ok(true)
+}
+
+#[tauri::command]
 pub fn open_path(path: String) -> Result<(), String> {
     open::that(path).map_err(|e| format!("{e:#}"))
 }

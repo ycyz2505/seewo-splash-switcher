@@ -136,6 +136,19 @@ sha256sums.txt
 
 第三方加速源能看到请求 URL 和 IP，但内容由签名保证；不要通过镜像发送凭据。
 
+### 本地 ZIP 更新（加速源下载失败时）
+
+如果当前网络下 GitHub/加速源的大文件下载失败，可以手动下载 Release 里的 `SeewoHtmlSplash-vX-portable.zip`，然后：
+
+- GUI：打开“状态与接管”，点“从本地 ZIP 更新”，选择下载好的 zip。
+- 命令行：
+
+  ```bash
+  seewo-splash-switcher.exe --install-zip D:\SeewoHtmlSplash\download\SeewoHtmlSplash-vX-portable.zip
+  ```
+
+程序会把 zip 解压到 `updates\staging\local-*`，调用 `tools\seewo-updater.exe` 替换 `app`、做健康检查、失败回滚，并顺带更新默认主题；`data\config.json` 和用户自己导入的主题不会被覆盖。
+
 ## 构建与发布
 
 不需要本地构建，全部在 GitHub Actions 的 `windows-latest` 上完成。

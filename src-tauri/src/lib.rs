@@ -54,6 +54,20 @@ pub fn run() {
             let ok = Config::load(&paths).is_ok() && paths.themes_dir.exists();
             std::process::exit(if ok { 0 } else { 1 });
         }
+        "--install-zip" => {
+            let zip_path = args.get(2).cloned().unwrap_or_default();
+            if zip_path.is_empty() {
+                eprintln!("missing zip path");
+                std::process::exit(2);
+            }
+            match update::install_from_zip(&paths, std::path::Path::new(&zip_path), "--boot --silent") {
+                Ok(()) => std::process::exit(0),
+                Err(err) => {
+                    eprintln!("install from zip failed: {err:#}");
+                    std::process::exit(1);
+                }
+            }
+        }
         "--splash" => {
             run_splash(paths, args[2..].to_vec());
         }
@@ -118,6 +132,7 @@ fn run_gui(paths: AppPaths) {
             commands::run_apply,
             commands::check_updates,
             commands::install_update,
+            commands::install_from_zip,
             commands::open_path,
             commands::open_data_dir,
             commands::open_logs_dir,
