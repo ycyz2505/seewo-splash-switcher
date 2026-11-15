@@ -239,6 +239,9 @@ pub fn check(paths: &AppPaths, config: &Config) -> Result<Option<UpdateInfo>> {
             best = Some((version, info));
         }
     }
+    if !fetched_any {
+        return Err(anyhow!("无法从任何源获取更新清单"));
+    }
     Ok(best.map(|(_, info)| info))
 }
 
