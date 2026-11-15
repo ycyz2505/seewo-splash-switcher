@@ -173,6 +173,7 @@ pub fn check(paths: &AppPaths, config: &Config) -> Result<Option<UpdateInfo>> {
     });
 
     let mut best: Option<(semver::Version, UpdateInfo)> = None;
+    let mut fetched_any = false;
     for result in results {
         let Ok((url, bytes, signature)) = result else {
             continue;
@@ -198,6 +199,7 @@ pub fn check(paths: &AppPaths, config: &Config) -> Result<Option<UpdateInfo>> {
         let Ok(manifest) = serde_json::from_slice::<UpdateManifest>(&bytes) else {
             continue;
         };
+        fetched_any = true;
         let Ok(version) = semver::Version::parse(&manifest.version) else {
             continue;
         };

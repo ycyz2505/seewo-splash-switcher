@@ -248,7 +248,6 @@ onMounted(refreshAll);
           :config="config"
           :busy="busy"
           @save="saveConfig"
-          @open="openPath"
         />
         <StatusView
           v-else-if="tab === 'status' && status"
@@ -260,9 +259,8 @@ onMounted(refreshAll);
           @test="testSplash"
           @check-update="checkUpdates"
           @install-update="installUpdate"
-          @open="openPath"
         />
-        <LogsView v-else-if="tab === 'logs'" @open="openPath" />
+        <LogsView v-else-if="tab === 'logs'" />
       </template>
     </main>
 
