@@ -45,7 +45,7 @@ start "" "%~dp0app\seewo-splash-switcher.exe"
 
 $zip = Join-Path $out "$name-portable.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
-Compress-Archive -Path (Join-Path $portableRoot $name) -DestinationPath $zip -CompressionLevel Optimal
+Compress-Archive -Path (Join-Path $portableRoot "$name\*") -DestinationPath $zip -CompressionLevel Optimal
 
 $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 $size = (Get-Item $zip).Length

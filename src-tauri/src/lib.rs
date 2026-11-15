@@ -94,6 +94,20 @@ fn run_gui(paths: AppPaths) {
     };
     tauri::Builder::default()
         .manage(state)
+        .setup(|app| {
+            let _main = tauri::webview::WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .title("希沃启动页切换器")
+            .inner_size(1100.0, 720.0)
+            .min_inner_size(900.0, 600.0)
+            .resizable(true)
+            .center()
+            .build()?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::save_config,

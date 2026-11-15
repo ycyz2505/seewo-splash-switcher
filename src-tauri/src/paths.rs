@@ -40,7 +40,7 @@ impl AppPaths {
             PathBuf::from(root)
         } else if exe_dir
             .file_name()
-            .map(|name| name.eq_ignore_ascii_case("app"))
+            .map(|name| name.to_string_lossy().eq_ignore_ascii_case("app"))
             .unwrap_or(false)
         {
             exe_dir.parent().context("app parent")?.to_path_buf()
