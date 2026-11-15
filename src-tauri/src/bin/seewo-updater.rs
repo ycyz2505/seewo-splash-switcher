@@ -87,6 +87,21 @@ fn main() {
 
     let app_exe = app_dir.join("seewo-splash-switcher.exe");
     if health_check(&app_exe) {
+        let new_theme = staging.join("data").join("themes").join("default");
+        if new_theme.join("manifest.json").exists() {
+            let target = root.join("data").join("themes").join("default");
+            if target.exists() {
+                let _ = std::fs::remove_dir_all(&target);
+            }
+            match copy_dir_recursive(&new_theme, &target) {
+                Ok(()) => util::log_line(&paths, "updater.log", "updated default theme"),
+                Err(err) => util::log_line(
+                    &paths,
+                    "updater.log",
+                    &format!("update default theme failed: {err}"),
+                ),
+            }
+        }
         util::log_line(&paths, "updater.log", "health check ok; restarting");
         start_app(&app_exe, &restart_args);
         std::process::exit(0);
@@ -127,6 +142,21 @@ fn start_app(exe: &Path, args: &str) {
         command.arg(arg);
     }
     let _ = command.spawn();
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let target = dst.join(entry.file_name());
+        if path.is_dir() {
+            copy_dir_recursive(&path, &target)?;
+        } else {
+            std::fs::copy(&path, &target)?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(windows)]

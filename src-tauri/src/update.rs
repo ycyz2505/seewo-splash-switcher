@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, UpdateConfig};
 use crate::paths::AppPaths;
 use crate::util;
 use crate::win32;
@@ -68,6 +68,38 @@ fn public_key_base64() -> Option<String> {
 
 fn signature_required() -> bool {
     public_key_base64().is_some()
+}
+
+fn build_client(config: &UpdateConfig, timeout: Duration) -> Result<reqwest::Client> {
+    let mut builder = reqwest::Client::builder()
+        .timeout(timeout)
+        .user_agent(format!(
+            "seewo-splash-switcher/{}",
+            env!("CARGO_PKG_VERSION")
+        ))
+        .no_proxy();
+    match config.proxy_mode.as_str() {
+        "direct" => {}
+        "manual" => {
+            let url = config.proxy_url.trim();
+            if url.is_empty() {
+                return Err(anyhow!("手动代理地址为空"));
+            }
+            builder = builder.proxy(
+                reqwest::Proxy::all(url)
+                    .with_context(|| format!("解析手动代理 {url}"))?,
+            );
+        }
+        _ => {
+            if let Some(url) = crate::util::system_proxy_url() {
+                builder = builder.proxy(
+                    reqwest::Proxy::all(&url)
+                        .with_context(|| format!("解析系统代理 {url}"))?,
+                );
+            }
+        }
+    }
+    builder.build().context("创建 HTTP 客户端")
 }
 
 fn verify_minisign(data: &[u8], signature_text: &str) -> Result<()> {
@@ -145,10 +177,7 @@ pub fn check(paths: &AppPaths, config: &Config) -> Result<Option<UpdateInfo>> {
     }
     let current = env!("CARGO_PKG_VERSION").to_string();
     let urls = manifest_urls(config);
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(8))
-        .user_agent(format!("seewo-splash-switcher/{current}"))
-        .build()?;
+    let client = build_client(&config.update, Duration::from_secs(8))?;
 
     let rt = tokio::runtime::Runtime::new()?;
     let results = rt.block_on(async {
@@ -249,10 +278,7 @@ pub fn download_and_stage(paths: &AppPaths, config: &Config, info: &UpdateInfo) 
     let download_dir = paths.updates_dir.join("download");
     std::fs::create_dir_all(&download_dir)?;
     let zip_path = download_dir.join(format!("SeewoHtmlSplash-v{}.zip", info.version));
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(300))
-        .user_agent(format!("seewo-splash-switcher/{}", info.current_version))
-        .build()?;
+    let client = build_client(&config.update, Duration::from_secs(300))?;
     let rt = tokio::runtime::Runtime::new()?;
 
     let urls = asset_urls(info, config);

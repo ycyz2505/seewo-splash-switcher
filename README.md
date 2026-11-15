@@ -136,6 +136,16 @@ sha256sums.txt
 
 第三方加速源能看到请求 URL 和 IP，但内容由签名保证；不要通过镜像发送凭据。
 
+### 下载代理
+
+设置 → 自动更新 → 下载代理：
+
+- **系统代理（默认）**：读取 `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings` 的 `ProxyEnable` / `ProxyServer`。
+- **直连**：不使用任何代理（包括环境变量里的 `HTTP_PROXY` / `HTTPS_PROXY`）。
+- **手动代理**：填写 `http://127.0.0.1:7890`、`socks5://127.0.0.1:7891` 等。
+
+不支持 PAC 自动配置脚本；如果系统使用 PAC，请改用手动代理或直连。改完设置后可以点“检查更新”验证代理是否可用。
+
 ### 本地 ZIP 更新（加速源下载失败时）
 
 如果当前网络下 GitHub/加速源的大文件下载失败，可以手动下载 Release 里的 `SeewoHtmlSplash-vX-portable.zip`，然后：

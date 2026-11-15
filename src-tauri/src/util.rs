@@ -197,6 +197,44 @@ pub fn webview2_version() -> String {
     read_registry_string(KEY, "pv").unwrap_or_else(|| "未检测到".to_string())
 }
 
+pub fn system_proxy_url() -> Option<String> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ};
+    use winreg::RegKey;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let key = hkcu
+        .open_subkey_with_flags(
+            r"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+            KEY_READ,
+        )
+        .ok()?;
+    let enabled: u32 = key.get_value("ProxyEnable").unwrap_or(0);
+    if enabled == 0 {
+        return None;
+    }
+    let server: String = key.get_value("ProxyServer").ok()?;
+    let server = server.trim();
+    if server.is_empty() {
+        return None;
+    }
+    let candidate = if server.contains('=') {
+        server.split(';').find_map(|part| {
+            let (scheme, value) = part.split_once('=')?;
+            if scheme.eq_ignore_ascii_case("https") || scheme.eq_ignore_ascii_case("http") {
+                Some(value.trim())
+            } else {
+                None
+            }
+        })?
+    } else {
+        server
+    };
+    if candidate.contains("://") {
+        Some(candidate.to_string())
+    } else {
+        Some(format!("http://{candidate}"))
+    }
+}
+
 pub fn copy_file(src: &Path, dst: &Path) -> Result<()> {
     if let Some(parent) = dst.parent() {
         std::fs::create_dir_all(parent)?;

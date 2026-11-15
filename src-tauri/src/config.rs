@@ -79,6 +79,8 @@ pub struct UpdateConfig {
     pub channel: String,
     pub check_interval_hours: u64,
     pub custom_mirrors: Vec<String>,
+    pub proxy_mode: String,
+    pub proxy_url: String,
 }
 
 impl Default for UpdateConfig {
@@ -89,6 +91,8 @@ impl Default for UpdateConfig {
             channel: "stable".to_string(),
             check_interval_hours: 24,
             custom_mirrors: Vec::new(),
+            proxy_mode: "system".to_string(),
+            proxy_url: String::new(),
         }
     }
 }

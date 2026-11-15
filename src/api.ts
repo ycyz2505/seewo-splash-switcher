@@ -22,6 +22,8 @@ export interface UpdateConfig {
   channel: string;
   checkIntervalHours: number;
   customMirrors: string[];
+  proxyMode: string;
+  proxyUrl: string;
 }
 
 export interface Config {

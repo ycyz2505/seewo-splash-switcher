@@ -171,6 +171,31 @@ function save() {
         <input v-model.number="draft.update.checkIntervalHours" class="input num" type="number" min="1" max="168" />
       </div>
 
+      <div class="row">
+        <div>
+          <div class="row-label">下载代理</div>
+          <div class="row-hint">自动更新检查和下载使用的代理。改完可点“检查更新”验证。</div>
+        </div>
+        <select v-model="draft.update.proxyMode" class="select">
+          <option value="system">系统代理（推荐）</option>
+          <option value="direct">直连（不使用代理）</option>
+          <option value="manual">手动代理</option>
+        </select>
+      </div>
+
+      <div v-if="draft.update.proxyMode === 'manual'" class="row">
+        <div>
+          <div class="row-label">手动代理地址</div>
+          <div class="row-hint">例如 http://127.0.0.1:7890 或 socks5://127.0.0.1:7891。</div>
+        </div>
+        <input
+          v-model="draft.update.proxyUrl"
+          class="input"
+          style="width: 260px"
+          placeholder="http://127.0.0.1:7890"
+        />
+      </div>
+
       <div class="row" style="display: block">
         <div class="row-label">自定义加速源</div>
         <div class="row-hint" style="margin-bottom: 8px">

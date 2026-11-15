@@ -21,6 +21,8 @@
     "autoInstall": true,
     "channel": "stable",
     "checkIntervalHours": 24,
-    "customMirrors": []
+    "customMirrors": [],
+    "proxyMode": "system",
+    "proxyUrl": ""
   }
 }

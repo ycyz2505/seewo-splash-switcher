@@ -1,6 +1,6 @@
 [package]
 name = "seewo-splash-switcher"
-version = "0.1.5"
+version = "0.1.6"
 description = "Seewo EasiNote splash screen switcher with HTML themes"
 authors = ["ycyz2505"]
 edition = "2021"
@@ -23,7 +23,7 @@ log = { version = "0.4", features = ["std"] }
 minisign-verify = "0.2"
 open = "5"
 rand = "0.8"
-reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls", "socks"] }
 rfd = "0.15"
 semver = "1"
 serde = { version = "1", features = ["derive"] }
