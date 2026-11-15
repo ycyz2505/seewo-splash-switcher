@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "default",
+  "name": "默认 · 星海",
+  "description": "原创深空渐变与粒子启动页，点击任意位置进入希沃白板。",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "preview": "preview.svg",
+  "options": {
+    "audio": {
+      "type": "boolean",
+      "default": false,
+      "label": "播放进入音效"
+    }
+  }
+}

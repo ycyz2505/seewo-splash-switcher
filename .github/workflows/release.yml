@@ -1,0 +1,109 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号，例如 0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      CARGO_TERM_COLOR: always
+      SEEWO_UPDATE_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $v = "${{ github.event.inputs.version }}"
+          } else {
+            $v = "${{ github.ref_name }}".TrimStart('v')
+          }
+          if ([string]::IsNullOrWhiteSpace($v)) { throw "Missing version" }
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "TAG=v$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Set version
+        shell: pwsh
+        run: pwsh ./scripts/set-version.ps1 -Version $env:VERSION
+
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app
+        run: npm run tauri build -- --no-bundle
+
+      - name: Build helper binaries
+        working-directory: src-tauri
+        run: cargo build --release --bin seewo-apply --bin seewo-updater --bin seewo-launcher-shim
+
+      - name: Package portable zip
+        shell: pwsh
+        run: pwsh ./scripts/package-portable.ps1 -Version $env:VERSION
+
+      - name: Generate latest.json
+        env:
+          VERSION: ${{ env.VERSION }}
+          TAG: ${{ env.TAG }}
+        run: node ./scripts/gen-manifest.mjs
+
+      - name: Sign artifacts
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            Write-Host "::warning::TAURI_SIGNING_PRIVATE_KEY is not set; release will be unsigned."
+            exit 0
+          }
+          Get-ChildItem dist/*.zip | ForEach-Object { npx tauri signer sign $_.FullName }
+          npx tauri signer sign (Resolve-Path dist/latest.json)
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pwsh ./scripts/publish-release.ps1 -Tag $env:TAG -Version $env:VERSION
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seewo-splash-switcher-${{ env.TAG }}
+          path: |
+            dist/*.zip
+            dist/*.sig
+            dist/latest.json
+            dist/mirrors.json
+            dist/sha256sums.txt
+          if-no-files-found: warn

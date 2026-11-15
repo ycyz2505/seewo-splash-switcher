@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "activeTheme": "default",
+  "enabled": true,
+  "splash": {
+    "launchSeewo": true,
+    "hideOriginalSplash": true,
+    "timeoutSeconds": 90,
+    "skipIfRunning": true,
+    "monitor": "primary",
+    "audio": false,
+    "forwardArgs": true
+  },
+  "takeover": {
+    "shortcuts": true,
+    "launcherShim": false,
+    "autostart": true
+  },
+  "update": {
+    "enabled": true,
+    "autoInstall": true,
+    "channel": "stable",
+    "checkIntervalHours": 24,
+    "customMirrors": []
+  }
+}
