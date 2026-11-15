@@ -31,7 +31,7 @@ struct StatusResponse {
 
 pub fn start_server(
     paths: AppPaths,
-    config: Arc<RwLock<Config>>,
+    config_store: Arc<RwLock<Config>>,
     splash: Arc<SplashRuntime>,
 ) -> anyhow::Result<u16> {
     let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
@@ -39,7 +39,7 @@ pub fn start_server(
     listener.set_nonblocking(true)?;
     let state = ServerState {
         paths: paths.clone(),
-        config,
+        config: config_store,
         splash,
     };
 
@@ -57,7 +57,7 @@ pub fn start_server(
                 .route("/health", get(health))
                 .route("/api/status", get(status))
                 .route("/api/enter", post(enter))
-                .route("/api/config", get(config))
+                .route("/api/config", get(api_config))
                 .route("/_sdk.js", get(sdk))
                 .nest_service("/themes", ServeDir::new(themes_dir))
                 .layer(CorsLayer::permissive())
@@ -96,7 +96,7 @@ async fn enter(State(state): State<ServerState>) -> Json<serde_json::Value> {
     Json(json!({ "ok": true }))
 }
 
-async fn config(State(state): State<ServerState>) -> Json<serde_json::Value> {
+async fn api_config(State(state): State<ServerState>) -> Json<serde_json::Value> {
     let cfg = state.config.read().unwrap();
     let theme = cfg.active_theme.clone();
     let options = themes::get_theme(&state.paths, &theme)

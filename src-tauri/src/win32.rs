@@ -6,7 +6,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     SW_RESTORE, SW_SHOW,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WindowInfo {
     pub hwnd: isize,
     pub pid: u32,

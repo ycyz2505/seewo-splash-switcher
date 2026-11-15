@@ -14,7 +14,6 @@ use crate::config::Config;
 use crate::paths::AppPaths;
 use crate::splash::SplashRuntime;
 use std::sync::{Arc, Mutex, RwLock};
-use tauri::Manager;
 
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();

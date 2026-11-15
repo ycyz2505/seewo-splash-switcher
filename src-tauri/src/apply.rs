@@ -4,7 +4,6 @@ use crate::util;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
@@ -318,7 +317,9 @@ pub fn run_elevated_helper(paths: &AppPaths, restore: bool) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
-        let status = Command::new(helper).args(["--root", &paths.root.to_string_lossy()]).status()?;
+        let status = std::process::Command::new(helper)
+            .args(["--root", &paths.root.to_string_lossy()])
+            .status()?;
         if !status.success() {
             return Err(anyhow::anyhow!("helper 退出码 {:?}", status.code()));
         }
