@@ -163,7 +163,12 @@ pub fn run_splash_loop(
             runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
             let entered = runtime.entered.load(Ordering::SeqCst);
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
-            if !test_mode && launched && !entered && window.rect.left > -10000 {
+            if !test_mode
+                && launched
+                && !entered
+                && window.visible
+                && window.rect.left > -10000
+            {
                 let mut rect = runtime.main_rect.lock().unwrap();
                 if rect.is_none() {
                     *rect = Some((
