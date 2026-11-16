@@ -173,24 +173,14 @@ seewo-splash-switcher.exe --check-update
 2. 生成签名密钥（一次性）：
 
    ```bash
-   npx tauri signer generate -w .secrets/minisign.key -p "<password>"
+   npx tauri signer generate -w .secrets/minisign.key
    ```
 
-   `tauri signer generate` 生成的 `.key.pub` 是整个 minisign 公钥文件的 base64；写入仓库前要解码成两行：
-
-   ```powershell
-   [IO.File]::WriteAllBytes(
-     "src-tauri\keys\minisign.pub",
-     [Convert]::FromBase64String((Get-Content -Raw .secrets\minisign.key.pub).Trim())
-   )
-   ```
-
+   把 `.key.pub` 的内容替换 `src-tauri/keys/minisign.pub`（第一行注释 + 第二行 base64 公钥）。
    在仓库 Secrets 里添加：
 
-   - `TAURI_SIGNING_PRIVATE_KEY`：`.secrets/minisign.key` 的完整内容
+   - `TAURI_SIGNING_PRIVATE_KEY`：`.secrets/minisign.key` 的内容
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：生成时设置的密码
-
-   `.secrets/` 已在 `.gitignore` 中；私钥和密码不要提交。
 
 3. 推送 tag：
 
