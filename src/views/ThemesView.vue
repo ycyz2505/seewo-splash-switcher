@@ -29,12 +29,12 @@ function hideBrokenImage(event: Event) {
     <div>
       <div class="page-title">启动页主题</div>
       <div class="page-desc">
-        选择一个 HTML 主题。切换后，下次启动希沃时会显示它；当前主题：{{ active?.name ?? "—" }}。
+        支持单个自包含 HTML，或带资源的 ZIP（根目录 index.html，可选 manifest.json）。当前主题：{{ active?.name ?? "—" }}。
       </div>
     </div>
     <div class="actions">
       <button class="btn" :disabled="busy" @click="emit('refresh')">刷新</button>
-      <button class="btn primary" :disabled="busy" @click="emit('import')">导入主题 ZIP</button>
+      <button class="btn primary" :disabled="busy" @click="emit('import')">导入主题（HTML/ZIP）</button>
       <button class="btn ghost" :disabled="!active" @click="active && emit('open', active.path)">
         打开主题目录
       </button>
@@ -42,7 +42,7 @@ function hideBrokenImage(event: Event) {
   </div>
 
   <div v-if="!themes.length" class="empty">
-    还没有主题。点击“导入主题 ZIP”，或把主题文件夹放到 <span class="mono">data/themes</span> 下。
+    还没有主题。点击“导入主题（HTML/ZIP）”，或把主题文件夹放到 <span class="mono">data/themes</span> 下。
   </div>
 
   <div v-else class="grid themes-grid">

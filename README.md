@@ -103,7 +103,24 @@ SDK：
 - `Seewo.onStatus(cb, intervalMs)`：轮询状态，返回停止函数。
 - `Seewo.config()`：返回当前配置、主题 id 和主题 options。
 
-主题包可以是 ZIP：根目录或单个顶层文件夹里放 `manifest.json` 即可。导入时会校验路径，拒绝 `..` 和绝对路径。
+主题可以三种方式提供：
+
+1. **文件夹**：放到 `data\themes\<id>\`，包含 `manifest.json`、`index.html` 和资源。
+2. **单个自包含 HTML**：在 GUI 里点“导入主题（HTML/ZIP）”，或运行：
+
+   ```bash
+   seewo-splash-switcher.exe --import-theme "D:\themes\my-theme.html" --activate
+   ```
+
+   会自动生成 `manifest.json`；HTML 引用的图片/CSS/JS 必须内联在文件里，否则请用 ZIP。
+
+3. **ZIP**：根目录或单个顶层文件夹里放 `index.html`；`manifest.json` 可选，没有会自动生成。Vite/React 等构建产物、带 GLB/音频/贴图的项目请用 ZIP：
+
+   ```bash
+   seewo-splash-switcher.exe --import-theme "D:\themes\genshin.zip" --activate
+   ```
+
+导入时会校验路径，拒绝 `..` 和绝对路径。
 
 ## 自动更新
 

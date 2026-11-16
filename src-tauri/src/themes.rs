@@ -199,29 +199,93 @@ pub fn delete_theme(paths: &AppPaths, active_id: &str, id: &str) -> Result<()> {
     Ok(())
 }
 
+fn write_manifest(dir: &Path, manifest: &ThemeManifest) -> Result<()> {
+    let text = serde_json::to_string_pretty(manifest)?;
+    std::fs::write(dir.join("manifest.json"), text)?;
+    Ok(())
+}
+
+fn unique_theme_id(paths: &AppPaths, base: &str) -> String {
+    let base = sanitize_id(base);
+    if !paths.theme_dir(&base).exists() {
+        return base;
+    }
+    for i in 2..1000 {
+        let candidate = format!("{base}-{i}");
+        if !paths.theme_dir(&candidate).exists() {
+            return candidate;
+        }
+    }
+    format!("{base}-{}", rand::random::<u32>())
+}
+
+pub fn import_theme_html(paths: &AppPaths, html_path: &Path) -> Result<String> {
+    let bytes = std::fs::read(html_path)
+        .with_context(|| format!("读取 {}", html_path.display()))?;
+    let stem = html_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("theme");
+    let base_id = if stem.eq_ignore_ascii_case("index") {
+        html_path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("theme")
+    } else {
+        stem
+    };
+    let id = unique_theme_id(paths, base_id);
+    let dir = paths.theme_dir(&id);
+    let result = (|| -> Result<()> {
+        std::fs::create_dir_all(&dir)?;
+        std::fs::write(dir.join("index.html"), &bytes)?;
+        let manifest = ThemeManifest {
+            schema_version: 1,
+            id: id.clone(),
+            name: base_id.to_string(),
+            description: "单 HTML 主题".to_string(),
+            version: "1.0.0".to_string(),
+            entry: "index.html".to_string(),
+            preview: String::new(),
+            options: serde_json::json!({}),
+        };
+        write_manifest(&dir, &manifest)?;
+        Ok(())
+    })();
+    if let Err(err) = result {
+        let _ = std::fs::remove_dir_all(&dir);
+        return Err(err);
+    }
+    Ok(id)
+}
+
 pub fn import_theme_zip(paths: &AppPaths, zip_path: &Path) -> Result<String> {
     let file = File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file).context("打开主题 zip")?;
 
     let mut manifest_candidates: Vec<PathBuf> = Vec::new();
+    let mut index_candidates: Vec<PathBuf> = Vec::new();
     for i in 0..archive.len() {
         let entry = archive.by_index(i)?;
         if let Some(path) = entry.enclosed_name() {
-            if path
-                .file_name()
-                .map(|n| n.eq_ignore_ascii_case("manifest.json"))
-                .unwrap_or(false)
-            {
+            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if file_name.eq_ignore_ascii_case("manifest.json") {
                 manifest_candidates.push(path);
+            } else if file_name.eq_ignore_ascii_case("index.html") {
+                index_candidates.push(path);
             }
         }
     }
     manifest_candidates.sort_by_key(|p| p.components().count());
-    let manifest_path = manifest_candidates
-        .first()
-        .cloned()
-        .ok_or_else(|| anyhow!("主题包里没有 manifest.json"))?;
-    let prefix = manifest_path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    index_candidates.sort_by_key(|p| p.components().count());
+    let prefix = if let Some(path) = manifest_candidates.first() {
+        path.parent().map(|p| p.to_path_buf()).unwrap_or_default()
+    } else if let Some(path) = index_candidates.first() {
+        path.parent().map(|p| p.to_path_buf()).unwrap_or_default()
+    } else {
+        return Err(anyhow!("主题包里没有 manifest.json 或 index.html"));
+    };
 
     let suffix: u32 = rand::random();
     let temp_dir = paths.themes_dir.join(format!(".import-{suffix:08x}"));
@@ -259,6 +323,24 @@ pub fn import_theme_zip(paths: &AppPaths, zip_path: &Path) -> Result<String> {
                 entry.read_to_end(&mut buf)?;
                 std::fs::write(&out, buf)?;
             }
+        }
+
+        if !temp_dir.join("manifest.json").exists() {
+            let stem = zip_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("theme");
+            let manifest = ThemeManifest {
+                schema_version: 1,
+                id: sanitize_id(stem),
+                name: stem.to_string(),
+                description: "从 ZIP 导入的主题".to_string(),
+                version: "1.0.0".to_string(),
+                entry: "index.html".to_string(),
+                preview: String::new(),
+                options: serde_json::json!({}),
+            };
+            write_manifest(&temp_dir, &manifest)?;
         }
 
         let manifest = read_manifest(&temp_dir)?;

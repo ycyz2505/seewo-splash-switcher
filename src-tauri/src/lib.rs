@@ -93,6 +93,41 @@ pub fn run() {
                 }
             }
         }
+        "--import-theme" => {
+            let theme_path = args.get(2).cloned().unwrap_or_default();
+            if theme_path.is_empty() {
+                eprintln!("missing theme path");
+                std::process::exit(2);
+            }
+            let path = std::path::PathBuf::from(&theme_path);
+            let ext = path
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            let result = if ext == "html" || ext == "htm" {
+                themes::import_theme_html(&paths, &path)
+            } else {
+                themes::import_theme_zip(&paths, &path)
+            };
+            match result {
+                Ok(id) => {
+                    util::log_line(&paths, "app.log", &format!("theme imported: {id}"));
+                    if args.iter().any(|arg| arg == "--activate") {
+                        if let Ok(mut config) = Config::load(&paths) {
+                            config.active_theme = id.clone();
+                            let _ = config.save(&paths);
+                        }
+                    }
+                    println!("{id}");
+                    std::process::exit(0);
+                }
+                Err(err) => {
+                    eprintln!("import theme failed: {err:#}");
+                    std::process::exit(1);
+                }
+            }
+        }
         "--splash" => {
             run_splash(paths, args[2..].to_vec());
         }

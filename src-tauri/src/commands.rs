@@ -65,14 +65,23 @@ pub fn set_active_theme(state: State<'_, AppState>, id: String) -> Result<(), St
 #[tauri::command]
 pub fn import_theme(state: State<'_, AppState>) -> Result<Option<String>, String> {
     let Some(path) = rfd::FileDialog::new()
-        .add_filter("主题包", &["zip"])
+        .add_filter("主题包 (ZIP)", &["zip"])
+        .add_filter("单个 HTML", &["html", "htm"])
         .pick_file()
     else {
         return Ok(None);
     };
-    themes::import_theme_zip(&state.paths, &path)
-        .map(Some)
-        .map_err(|e| format!("{e:#}"))
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let result = if ext == "html" || ext == "htm" {
+        themes::import_theme_html(&state.paths, &path)
+    } else {
+        themes::import_theme_zip(&state.paths, &path)
+    };
+    result.map(Some).map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
