@@ -54,6 +54,31 @@ pub fn run() {
             let ok = Config::load(&paths).is_ok() && paths.themes_dir.exists();
             std::process::exit(if ok { 0 } else { 1 });
         }
+        "--check-update" => {
+            let config = Config::load(&paths).unwrap_or_default();
+            match update::check(&paths, &config) {
+                Ok(Some(info)) => {
+                    util::log_line(
+                        &paths,
+                        "app.log",
+                        &format!("update available: {}", info.version),
+                    );
+                    std::process::exit(0);
+                }
+                Ok(None) => {
+                    util::log_line(&paths, "app.log", "no update available");
+                    std::process::exit(0);
+                }
+                Err(err) => {
+                    util::log_line(
+                        &paths,
+                        "app.log",
+                        &format!("update check failed: {err:#}"),
+                    );
+                    std::process::exit(1);
+                }
+            }
+        }
         "--install-zip" => {
             let zip_path = args.get(2).cloned().unwrap_or_default();
             if zip_path.is_empty() {

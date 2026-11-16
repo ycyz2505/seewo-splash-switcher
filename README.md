@@ -146,6 +146,12 @@ sha256sums.txt
 
 不支持 PAC 自动配置脚本；如果系统使用 PAC，请改用手动代理或直连。改完设置后可以点“检查更新”验证代理是否可用。
 
+命令行也可以只检查更新（结果写入 `logs\app.log`，不修改 C:）：
+
+```bash
+seewo-splash-switcher.exe --check-update
+```
+
 ### 本地 ZIP 更新（加速源下载失败时）
 
 如果当前网络下 GitHub/加速源的大文件下载失败，可以手动下载 Release 里的 `SeewoHtmlSplash-vX-portable.zip`，然后：
