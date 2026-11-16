@@ -170,13 +170,17 @@ seewo-splash-switcher.exe --check-update
 不需要本地构建，全部在 GitHub Actions 的 `windows-latest` 上完成。
 
 1. 把仓库推到 GitHub。
-2. 生成签名密钥（一次性）：
+2. 签名（可选，当前未启用）：
+
+   当前项目没有设置签名密钥，Release 是 unsigned，自动更新只校验 SHA-256；workflow 的 `Sign artifacts` 步骤会在没有 `TAURI_SIGNING_PRIVATE_KEY` 时跳过签名。
+
+   如果以后要启用签名，再执行：
 
    ```bash
    npx tauri signer generate -w .secrets/minisign.key
    ```
 
-   把 `.key.pub` 的内容替换 `src-tauri/keys/minisign.pub`（第一行注释 + 第二行 base64 公钥）。
+   把 `.key.pub` 解码后的两行内容（注释 + base64 公钥）写入 `src-tauri/keys/minisign.pub`。
    在仓库 Secrets 里添加：
 
    - `TAURI_SIGNING_PRIVATE_KEY`：`.secrets/minisign.key` 的内容
