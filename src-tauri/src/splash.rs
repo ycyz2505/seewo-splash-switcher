@@ -182,9 +182,24 @@ pub fn run_splash_loop(
             }
             runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
+            let offscreen = window.rect.left <= -10000
+                || window.rect.top <= -10000
+                || window.rect.right <= 0
+                || window.rect.bottom <= 0;
+            if offscreen {
+                // 上一次启动页异常退出时可能把希沃主窗口留在屏幕外；
+                // 这里主动把它挪回可见区域，否则后面永远找不到可显示的窗口。
+                util::log_line(
+                    paths,
+                    "splash.log",
+                    &format!("recovering offscreen main window {}", window.hwnd),
+                );
+                win32::reveal_window(window.hwnd);
+                runtime.main_visible.store(true, Ordering::SeqCst);
+            }
             // 如果希沃本来就在运行（本次没有启动它），主窗口可能已最小化/隐藏，
             // 也算就绪；否则等主窗口真正可见再让主题显示“门”。
-            if window.visible || !launched {
+            if window.visible || !launched || offscreen {
                 runtime.main_visible.store(true, Ordering::SeqCst);
             }
             let entered = runtime.entered.load(Ordering::SeqCst);

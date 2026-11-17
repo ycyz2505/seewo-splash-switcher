@@ -65,6 +65,7 @@ D:\SeewoHtmlSplash\
 - `seewo install: ...` 是解析出的安装目录、`Main\EasiNote.exe`、`swenlauncher.exe`；`exists=false` 说明路径嗅探失败。
 - `launched ...` 表示希沃已启动；`launch failed` / `找不到希沃启动程序` 表示启动失败。
 - `main window found hwnd=... visible=...` 表示找到了希沃主窗口；没有这一行说明主窗口识别失败。
+- `recovering offscreen main window ...` 表示检测到上次异常退出把希沃主窗口留在了屏幕外，程序已主动移回。
 - `revealed main window ...` 表示已经露出主窗口；`no main window to reveal` 说明点击进入时仍未找到主窗口。
 
 随手运行一次诊断（不需要启动启动页）：

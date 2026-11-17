@@ -116,7 +116,9 @@ pub fn find_main_window() -> Option<WindowInfo> {
             let looks_main = w.class_name.contains("HwndWrapper[EasiNote")
                 || w.title.contains("希沃白板")
                 || w.title.contains("EasiNote");
-            let title_ok = !is_helper_title(&w.title) || (w.title.trim().is_empty() && w.visible);
+            let title_ok = !is_helper_title(&w.title)
+                || (w.title.trim().is_empty()
+                    && (w.visible || w.class_name.contains("HwndWrapper[EasiNote")));
             !is_splash && looks_main && title_ok && w.width() > 300 && w.height() > 200
         })
         .collect();
@@ -156,6 +158,8 @@ pub fn move_window_offscreen(hwnd: isize) {
 }
 
 pub fn restore_window(hwnd: isize, x: i32, y: i32, width: i32, height: i32) {
+    // 之前可能被挪到屏幕外；恢复时避免继续留在 -32000。
+    let (x, y) = if x <= -10000 || y <= -10000 { (100, 80) } else { (x, y) };
     unsafe {
         SetWindowPos(
             hwnd as HWND,
@@ -172,17 +176,44 @@ pub fn restore_window(hwnd: isize, x: i32, y: i32, width: i32, height: i32) {
 }
 
 pub fn reveal_window(hwnd: isize) {
+    let mut rect = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
     unsafe {
+        let _ = GetWindowRect(hwnd as HWND, &mut rect);
+    }
+    let width = (rect.right - rect.left).max(800);
+    let height = (rect.bottom - rect.top).max(600);
+    let offscreen = rect.left <= -10000
+        || rect.top <= -10000
+        || rect.right <= 0
+        || rect.bottom <= 0;
+    unsafe {
+        if offscreen {
+            SetWindowPos(
+                hwnd as HWND,
+                std::ptr::null_mut(),
+                100,
+                80,
+                width,
+                height,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+            );
+        } else {
+            SetWindowPos(
+                hwnd as HWND,
+                std::ptr::null_mut(),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
+            );
+        }
         ShowWindow(hwnd as HWND, SW_SHOWNORMAL);
-        SetWindowPos(
-            hwnd as HWND,
-            std::ptr::null_mut(),
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
-        );
         SetForegroundWindow(hwnd as HWND);
     }
 }
