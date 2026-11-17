@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { api } from "../api";
 
-const files = ["app.log", "apply.log", "splash.log", "updater.log"];
+const files = ["app.log", "apply.log", "splash.log", "updater.log", "diagnose.log"];
 const selected = ref(files[0]);
 const content = ref("");
 const loading = ref(false);

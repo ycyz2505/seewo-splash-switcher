@@ -42,7 +42,7 @@ D:\SeewoHtmlSplash\
     download\                   更新包下载缓存
     staging\                    解压后的新版本
   logs\
-    app.log / apply.log / splash.log / updater.log
+    app.log / apply.log / splash.log / updater.log / diagnose.log
 ```
 
 ## C: 重启还原
@@ -57,6 +57,27 @@ D:\SeewoHtmlSplash\
 - C: 还原后，计划任务/快捷方式可能被清除。下次从 D: 打开本程序，点“一键修复”即可重新接管；如果计划任务还在，开机会自动执行 `--boot`。
 
 `--boot` 会先重新应用接管，再检查更新；如果开启“开机自动安装”，发现新版本会下载、替换 `app`、健康检查、失败回滚，然后自动重启。
+
+## 排查：启动页播放完但没有露出希沃
+
+先看 `logs\splash.log`：
+
+- `seewo install: ...` 是解析出的安装目录、`Main\EasiNote.exe`、`swenlauncher.exe`；`exists=false` 说明路径嗅探失败。
+- `launched ...` 表示希沃已启动；`launch failed` / `找不到希沃启动程序` 表示启动失败。
+- `main window found hwnd=... visible=...` 表示找到了希沃主窗口；没有这一行说明主窗口识别失败。
+- `revealed main window ...` 表示已经露出主窗口；`no main window to reveal` 说明点击进入时仍未找到主窗口。
+
+随手运行一次诊断（不需要启动启动页）：
+
+```bash
+seewo-splash-switcher.exe --diagnose
+```
+
+结果同时写入 `logs\diagnose.log`，包含安装路径摘要，以及所有类名/标题含 `EasiNote`、`希沃`、`Splash` 的窗口（hwnd、pid、visible、class、title、rect）。如果日志里 `launched` 有值但没有 `main window found`，把 `diagnose.log` 发出来即可定位窗口识别问题。
+
+主题里的“门/点击进入”由 `Seewo.onStatus` 的 `mainReady` 控制；`mainReady` 要求主窗口已创建且可见。“等待超时（秒）”为 `0` 时一直等待希沃就绪/点击，不会自动关闭；默认就是 `0`。
+
+0.1.9 起快捷方式会保留希沃原图标（修复了把 `,0` 写回快捷方式导致空白图标的问题）。已经变空白的，更新后重新点一次“一键修复”即可。
 
 ## 主题格式
 

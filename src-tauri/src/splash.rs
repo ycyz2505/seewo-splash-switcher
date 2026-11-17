@@ -15,6 +15,8 @@ pub struct SplashRuntime {
     pub entered: AtomicBool,
     pub seewo_launched: AtomicBool,
     pub main_hwnd: AtomicIsize,
+    pub main_visible: AtomicBool,
+    pub test_ready: AtomicBool,
     pub main_rect: Mutex<Option<(i32, i32, i32, i32)>>,
     pub error: Mutex<Option<String>>,
     pub notify: tokio::sync::Notify,
@@ -27,6 +29,8 @@ impl SplashRuntime {
             entered: AtomicBool::new(false),
             seewo_launched: AtomicBool::new(false),
             main_hwnd: AtomicIsize::new(0),
+            main_visible: AtomicBool::new(false),
+            test_ready: AtomicBool::new(false),
             main_rect: Mutex::new(None),
             error: Mutex::new(None),
             notify: tokio::sync::Notify::new(),
@@ -47,6 +51,8 @@ impl SplashRuntime {
     pub fn status(&self) -> SplashStatus {
         let entered = self.entered.load(Ordering::SeqCst);
         let main_hwnd = self.main_hwnd.load(Ordering::SeqCst);
+        let main_visible = self.main_visible.load(Ordering::SeqCst);
+        let test_ready = self.test_ready.load(Ordering::SeqCst);
         let error = self.error.lock().ok().and_then(|e| e.clone());
         let state = if error.is_some() {
             "error"
@@ -58,7 +64,7 @@ impl SplashRuntime {
         SplashStatus {
             state: state.to_string(),
             seewo_running: win32::is_seewo_running(),
-            main_ready: main_hwnd != 0,
+            main_ready: (main_hwnd != 0 && main_visible) || test_ready,
             entered,
             elapsed_ms: self.started_at.elapsed().as_millis(),
             error,
@@ -79,6 +85,11 @@ pub struct SplashStatus {
 
 pub fn launch_seewo(paths: &AppPaths, config: &Config, extra_args: &[String]) -> Result<()> {
     let install = util::seewo_install();
+    util::log_line(
+        paths,
+        "splash.log",
+        &format!("seewo install: {}", install.summary()),
+    );
     let launcher = Path::new(&install.launcher_path);
     let launcher_orig = launcher.with_file_name("swenlauncher_orig.exe");
     let exe = Path::new(&install.exe_path);
@@ -134,14 +145,18 @@ pub fn run_splash_loop(
     }
 
     let hide = config.splash.hide_original_splash;
-    let timeout = Duration::from_secs(if test_mode {
-        10
+    let timeout = if test_mode {
+        Duration::from_secs(25)
+    } else if config.splash.timeout_seconds == 0 {
+        // 0 表示一直等到希沃就绪或用户进入，不主动关闭启动页。
+        Duration::from_secs(24 * 60 * 60)
     } else {
-        config.splash.timeout_seconds.max(10)
-    });
+        Duration::from_secs(config.splash.timeout_seconds.max(10))
+    };
 
     let start = Instant::now();
     let poll_until = start + timeout;
+    let mut entered_at: Option<Instant> = None;
     while Instant::now() < poll_until {
         if hide {
             let hidden = win32::hide_splash_windows();
@@ -149,20 +164,30 @@ pub fn run_splash_loop(
                 util::log_line(paths, "splash.log", "hid original Splash Image window");
             }
         }
+        // 测试模式不启动希沃；让启动页在搭路动画后自动进入“门”的状态，
+        // 方便在 GUI 的“测试启动页”里预览完整流程。
+        if test_mode && start.elapsed() > Duration::from_secs(6) {
+            runtime.test_ready.store(true, Ordering::SeqCst);
+        }
         if let Some(window) = win32::find_main_window() {
             if runtime.main_hwnd.load(Ordering::SeqCst) == 0 {
                 util::log_line(
                     paths,
                     "splash.log",
                     &format!(
-                        "main window found hwnd={} class={} title={}",
-                        window.hwnd, window.class_name, window.title
+                        "main window found hwnd={} class={} title={} visible={}",
+                        window.hwnd, window.class_name, window.title, window.visible
                     ),
                 );
             }
             runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
-            let entered = runtime.entered.load(Ordering::SeqCst);
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
+            // 如果希沃本来就在运行（本次没有启动它），主窗口可能已最小化/隐藏，
+            // 也算就绪；否则等主窗口真正可见再让主题显示“门”。
+            if window.visible || !launched {
+                runtime.main_visible.store(true, Ordering::SeqCst);
+            }
+            let entered = runtime.entered.load(Ordering::SeqCst);
             if !test_mode
                 && launched
                 && !entered
@@ -184,8 +209,18 @@ pub fn run_splash_loop(
         }
         if runtime.entered.load(Ordering::SeqCst) {
             let launched = runtime.seewo_launched.load(Ordering::SeqCst);
-            let main_ready = runtime.main_hwnd.load(Ordering::SeqCst) != 0;
+            let main_ready = runtime.main_hwnd.load(Ordering::SeqCst) != 0
+                && runtime.main_visible.load(Ordering::SeqCst);
             if main_ready || !launched || test_mode {
+                break;
+            }
+            let since = *entered_at.get_or_insert_with(Instant::now);
+            if since.elapsed() > Duration::from_secs(20) {
+                util::log_line(
+                    paths,
+                    "splash.log",
+                    "entered but main window still not visible; giving up waiting",
+                );
                 break;
             }
         }
@@ -211,6 +246,9 @@ pub fn run_splash_loop(
         while Instant::now() < deadline {
             if let Some(window) = win32::find_main_window() {
                 runtime.main_hwnd.store(window.hwnd, Ordering::SeqCst);
+                if window.visible {
+                    runtime.main_visible.store(true, Ordering::SeqCst);
+                }
                 break;
             }
             std::thread::sleep(Duration::from_millis(80));

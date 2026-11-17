@@ -93,6 +93,35 @@ pub fn run() {
                 }
             }
         }
+        "--diagnose" => {
+            let install = util::seewo_install();
+            let mut out = String::new();
+            out.push_str(&format!("seewo install: {}\n", install.summary()));
+            out.push_str("windows:\n");
+            for w in win32::enum_windows() {
+                if w.class_name.contains("EasiNote")
+                    || w.title.contains("希沃")
+                    || w.title.contains("EasiNote")
+                    || w.class_name.contains("Splash")
+                {
+                    out.push_str(&format!(
+                        "  hwnd={} pid={} visible={} class={} title={} rect={},{},{},{}\n",
+                        w.hwnd,
+                        w.pid,
+                        w.visible,
+                        w.class_name,
+                        w.title,
+                        w.rect.left,
+                        w.rect.top,
+                        w.rect.right,
+                        w.rect.bottom
+                    ));
+                }
+            }
+            util::log_line(&paths, "diagnose.log", &out);
+            println!("{out}");
+            std::process::exit(0);
+        }
         "--import-theme" => {
             let theme_path = args.get(2).cloned().unwrap_or_default();
             if theme_path.is_empty() {

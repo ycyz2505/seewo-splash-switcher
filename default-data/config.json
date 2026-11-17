@@ -5,7 +5,7 @@
   "splash": {
     "launchSeewo": true,
     "hideOriginalSplash": true,
-    "timeoutSeconds": 90,
+    "timeoutSeconds": 0,
     "skipIfRunning": true,
     "monitor": "primary",
     "audio": false,

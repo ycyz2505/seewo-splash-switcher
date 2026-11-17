@@ -180,7 +180,13 @@ pub fn open_logs_dir(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 pub fn read_log(state: State<'_, AppState>, name: String) -> Result<String, String> {
-    let allowed = ["app.log", "apply.log", "splash.log", "updater.log"];
+    let allowed = [
+        "app.log",
+        "apply.log",
+        "splash.log",
+        "updater.log",
+        "diagnose.log",
+    ];
     if !allowed.contains(&name.as_str()) {
         return Err("不允许读取该日志".to_string());
     }

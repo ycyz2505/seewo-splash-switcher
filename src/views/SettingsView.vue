@@ -99,9 +99,9 @@ function save() {
       <div class="row">
         <div>
           <div class="row-label">等待超时（秒）</div>
-          <div class="row-hint">超过这个时间仍未点击，自动进入希沃。</div>
+          <div class="row-hint">0 = 一直等待希沃就绪或点击进入；大于 0 时超时后自动进入希沃。</div>
         </div>
-        <input v-model.number="draft.splash.timeoutSeconds" class="input num" type="number" min="10" max="600" />
+        <input v-model.number="draft.splash.timeoutSeconds" class="input num" type="number" min="0" max="3600" />
       </div>
     </section>
 

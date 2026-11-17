@@ -1,6 +1,6 @@
 [package]
 name = "seewo-splash-switcher"
-version = "0.1.8"
+version = "0.1.9"
 description = "Seewo EasiNote splash screen switcher with HTML themes"
 authors = ["ycyz2505"]
 edition = "2021"

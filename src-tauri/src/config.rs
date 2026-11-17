@@ -44,7 +44,7 @@ impl Default for SplashConfig {
         Self {
             launch_seewo: true,
             hide_original_splash: true,
-            timeout_seconds: 90,
+            timeout_seconds: 0,
             skip_if_running: true,
             monitor: "primary".to_string(),
             audio: false,

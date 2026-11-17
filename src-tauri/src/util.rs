@@ -122,25 +122,101 @@ pub struct SeewoInstall {
     pub launcher_path: String,
 }
 
-pub fn seewo_install() -> SeewoInstall {
-    const KEY: &str = r"SOFTWARE\WOW6432Node\Seewo\EasiNote5";
-    let exe_path = read_registry_string(KEY, "ActualExePath").unwrap_or_default();
-    let version_path = read_registry_string(KEY, "VersionPath").unwrap_or_default();
-    let version = read_registry_string(KEY, "version").unwrap_or_default();
-    let launcher_path = read_registry_string(KEY, "ExePath").unwrap_or_default();
+fn reg_string(hive: winreg::HKEY, subkey: &str, value: &str) -> Option<String> {
+    let key = winreg::RegKey::predef(hive).open_subkey(subkey).ok()?;
+    key.get_value::<String, _>(value).ok()
+}
 
-    let mut install_root = if !version_path.is_empty() {
-        PathBuf::from(&version_path)
+fn find_version_dir(install_root: &Path) -> Option<PathBuf> {
+    let mut dirs: Vec<PathBuf> = std::fs::read_dir(install_root)
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir() && path.join("Main").join("EasiNote.exe").exists())
+        .collect();
+    dirs.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+    dirs.into_iter().next()
+}
+
+impl SeewoInstall {
+    pub fn summary(&self) -> String {
+        let exists = |p: &str| !p.is_empty() && Path::new(p).exists();
+        format!(
+            "install_root={} (exists={}) version_path={} version={} exe_path={} (exists={}) launcher_path={} (exists={})",
+            self.install_root,
+            exists(&self.install_root),
+            self.version_path,
+            self.version,
+            self.exe_path,
+            exists(&self.exe_path),
+            self.launcher_path,
+            exists(&self.launcher_path)
+        )
+    }
+}
+
+pub fn seewo_install() -> SeewoInstall {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
+    let keys: [(&str, winreg::HKEY); 6] = [
+        (r"SOFTWARE\WOW6432Node\Seewo\EasiNote5", HKEY_LOCAL_MACHINE),
+        (r"SOFTWARE\Seewo\EasiNote5", HKEY_LOCAL_MACHINE),
+        (r"SOFTWARE\WOW6432Node\CVTE\EasiNote5", HKEY_LOCAL_MACHINE),
+        (r"SOFTWARE\CVTE\EasiNote5", HKEY_LOCAL_MACHINE),
+        (r"SOFTWARE\WOW6432Node\Seewo\EasiNote5", HKEY_CURRENT_USER),
+        (r"SOFTWARE\Seewo\EasiNote5", HKEY_CURRENT_USER),
+    ];
+    let mut actual_exe = String::new();
+    let mut version_path = String::new();
+    let mut version = String::new();
+    let mut launcher_path = String::new();
+    let mut install_path = String::new();
+    for (key, hive) in keys {
+        if actual_exe.is_empty() {
+            actual_exe = reg_string(hive, key, "ActualExePath").unwrap_or_default();
+        }
+        if version_path.is_empty() {
+            version_path = reg_string(hive, key, "VersionPath").unwrap_or_default();
+        }
+        if version.is_empty() {
+            version = reg_string(hive, key, "version").unwrap_or_default();
+        }
+        if launcher_path.is_empty() {
+            launcher_path = reg_string(hive, key, "ExePath").unwrap_or_default();
+        }
+        if install_path.is_empty() {
+            install_path = reg_string(hive, key, "path").unwrap_or_default();
+        }
+    }
+
+    let mut install_root = if !install_path.is_empty() {
+        install_path
+    } else if !version_path.is_empty() {
+        Path::new(&version_path)
             .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default()
+    } else if !actual_exe.is_empty() {
+        Path::new(&actual_exe)
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default()
     } else {
         String::new()
     };
-    if install_root.is_empty() {
+
+    if install_root.is_empty() || !Path::new(&install_root).exists() {
         for candidate in [
             r"C:\Program Files (x86)\Seewo\EasiNote5",
             r"C:\Program Files\Seewo\EasiNote5",
+            r"C:\Seewo\EasiNote5",
+            r"D:\Program Files (x86)\Seewo\EasiNote5",
+            r"D:\Program Files\Seewo\EasiNote5",
+            r"D:\Seewo\EasiNote5",
+            r"E:\Program Files (x86)\Seewo\EasiNote5",
+            r"E:\Program Files\Seewo\EasiNote5",
+            r"E:\Seewo\EasiNote5",
         ] {
             if Path::new(candidate).exists() {
                 install_root = candidate.to_string();
@@ -149,31 +225,77 @@ pub fn seewo_install() -> SeewoInstall {
         }
     }
 
-    let launcher = if !launcher_path.is_empty() {
-        launcher_path
-    } else if !install_root.is_empty() {
-        Path::new(&install_root)
-            .join(r"swenlauncher\swenlauncher.exe")
-            .to_string_lossy()
-            .to_string()
-    } else {
-        String::new()
-    };
+    if install_root.is_empty() && !actual_exe.is_empty() {
+        if let Some(root) = Path::new(&actual_exe)
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+        {
+            if root.exists() {
+                install_root = root.to_string_lossy().to_string();
+            }
+        }
+    }
+    if install_root.is_empty() && !launcher_path.is_empty() {
+        if let Some(root) = Path::new(&launcher_path).parent().and_then(|p| p.parent()) {
+            if root.exists() {
+                install_root = root.to_string_lossy().to_string();
+            }
+        }
+    }
 
-    let exe = if !exe_path.is_empty() {
-        exe_path
-    } else if !version_path.is_empty() {
+    if (version_path.is_empty() || !Path::new(&version_path).exists()) && !install_root.is_empty() {
+        if let Some(dir) = find_version_dir(Path::new(&install_root)) {
+            version_path = dir.to_string_lossy().to_string();
+        }
+    }
+
+    let mut exe_path = if !actual_exe.is_empty() && Path::new(&actual_exe).exists() {
+        actual_exe
+    } else if !version_path.is_empty()
+        && Path::new(&version_path).join("Main").join("EasiNote.exe").exists()
+    {
         Path::new(&version_path)
-            .join(r"Main\EasiNote.exe")
+            .join("Main")
+            .join("EasiNote.exe")
             .to_string_lossy()
             .to_string()
     } else {
         String::new()
     };
+    if exe_path.is_empty() && !install_root.is_empty() {
+        if let Some(dir) = find_version_dir(Path::new(&install_root)) {
+            let candidate = dir.join("Main").join("EasiNote.exe");
+            if candidate.exists() {
+                version_path = dir.to_string_lossy().to_string();
+                exe_path = candidate.to_string_lossy().to_string();
+            }
+        }
+    }
+    if exe_path.is_empty() && !install_root.is_empty() {
+        let candidate = Path::new(&install_root).join("Main").join("EasiNote.exe");
+        if candidate.exists() {
+            exe_path = candidate.to_string_lossy().to_string();
+        }
+    }
+
+    let mut launcher = if !launcher_path.is_empty() && Path::new(&launcher_path).exists() {
+        launcher_path
+    } else {
+        String::new()
+    };
+    if launcher.is_empty() && !install_root.is_empty() {
+        let candidate = Path::new(&install_root)
+            .join("swenlauncher")
+            .join("swenlauncher.exe");
+        if candidate.exists() {
+            launcher = candidate.to_string_lossy().to_string();
+        }
+    }
 
     SeewoInstall {
         install_root,
-        exe_path: exe,
+        exe_path,
         version_path,
         version,
         launcher_path: launcher,

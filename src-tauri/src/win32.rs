@@ -81,7 +81,9 @@ pub fn find_window_by_class(class_name: &str) -> Option<isize> {
 pub fn hide_splash_windows() -> usize {
     let mut hidden = 0;
     for window in enum_windows() {
-        if window.class_name == "Splash Image" || window.title == "Splash Image" {
+        if (window.class_name == "Splash Image" || window.title == "Splash Image")
+            && window.visible
+        {
             unsafe {
                 ShowWindow(window.hwnd as HWND, SW_HIDE);
             }
@@ -89,6 +91,20 @@ pub fn hide_splash_windows() -> usize {
         }
     }
     hidden
+}
+
+fn is_helper_title(title: &str) -> bool {
+    let title = title.trim().to_lowercase();
+    title.is_empty()
+        || title.contains("hidden window")
+        || title.contains("mediacontextnotificationwindow")
+        || title.contains("systemresourcenotifywindow")
+        || title.contains("broadcasteventwindow")
+        || title.contains("gdi+ window")
+        || title.contains("default ime")
+        || title.contains("msctfime ui")
+        || title.contains("chrome_systemmessagewindow")
+        || title.contains("splash image")
 }
 
 pub fn find_main_window() -> Option<WindowInfo> {
@@ -100,10 +116,28 @@ pub fn find_main_window() -> Option<WindowInfo> {
             let looks_main = w.class_name.contains("HwndWrapper[EasiNote")
                 || w.title.contains("希沃白板")
                 || w.title.contains("EasiNote");
-            !is_splash && looks_main && w.width() > 300 && w.height() > 200
+            let title_ok = !is_helper_title(&w.title) || (w.title.trim().is_empty() && w.visible);
+            !is_splash && looks_main && title_ok && w.width() > 300 && w.height() > 200
         })
         .collect();
-    candidates.sort_by_key(|w| std::cmp::Reverse(w.area()));
+    let score = |w: &WindowInfo| -> i32 {
+        let mut score = 0;
+        if w.title.contains("希沃白板") {
+            score += 2;
+        }
+        if w.class_name.contains("HwndWrapper[EasiNote") {
+            score += 1;
+        }
+        if w.visible {
+            score += 4;
+        }
+        score
+    };
+    candidates.sort_by(|a, b| {
+        score(b)
+            .cmp(&score(a))
+            .then_with(|| b.area().cmp(&a.area()))
+    });
     candidates.into_iter().next()
 }
 
